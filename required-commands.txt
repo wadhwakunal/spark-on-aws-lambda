@@ -1,0 +1,11 @@
+1. Navigate to the "cloudformation" folder and run the AWS SAM template sam-imagebuilder.yaml using the following command:
+	sam deploy --template-file sam-imagebuilder.yaml --stack-name spark-on-lambda-image-builder --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3
+	
+2. After the stack has been successfully deployed, copy the ECR repository URI (spark-on-lambda-image-builder) that is displayed in the output of the stack.
+
+3. Run the AWS SAM Lambda package with the required Region and ECR repository:
+	sam deploy --template-file sam-template.yaml --stack-name spark-on-lambda-stack --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-on-lambda-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake-validated ParameterKey=SparkScript,ParameterValue=spark_test/sample-accommodations-to-delta.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-on-lambda-image-builder:latest'
+	
+4. Clean up
+	sam delete --stack-name spark-on-lambda-stack
+	sam delete --stack-name spark-on-lambda-image-builder
