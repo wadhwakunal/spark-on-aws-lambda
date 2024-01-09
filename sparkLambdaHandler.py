@@ -1,4 +1,5 @@
 import boto3
+import botocore
 import sys
 import os
 import subprocess
