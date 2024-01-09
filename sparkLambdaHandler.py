@@ -79,7 +79,6 @@ def lambda_handler(event, context):
     
     unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
     unprocessed_files = get_list_of_unprocessed_files(s3_bucket_script,unprocessed_file_key)
-    logger.info(f"List of unprocessed files: {str(unprocessed_files, encoding='utf-8')}")
     os.environ['INPUT_PATH_LIST'] = unprocessed_files
 
     s3_script_download(s3_bucket_script,input_script)
