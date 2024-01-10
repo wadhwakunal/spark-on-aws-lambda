@@ -18,9 +18,9 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> No
     s3 = boto3.resource("s3")
     try:
         content = s3.Object(s3_bucket_script, unprocessed_file_key).get()['Body'].read()
-        logger.info(f'Unprocessed files: {content}')
     except botocore.exceptions.ClientError as e:
         logger.info(f"Error: {e.response['Error']['Code']}")
+    logger.info(f'Unprocessed files: {content}')
     logger.info(f'Now deleting file {unprocessed_file_key}')
     s3.Object(s3_bucket_script, unprocessed_file_key).delete()
     return content
