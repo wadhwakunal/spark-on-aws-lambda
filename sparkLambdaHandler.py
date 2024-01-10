@@ -51,9 +51,9 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
     # input_path = event.get('INPUT_PATH','')
     # output_path = event.get('OUTPUT_PATH', '')
 
-    for key,value in event.items():
-        os.environ[key] = value
-    # Run the spark-submit command on the local copy of teh script
+    #for key,value in event.items():
+    #    os.environ[key] = value
+    # Run the spark-submit command on the local copy of the script
     try:
         logger.info(f'Spark-Submitting the Spark script {input_script} from {s3_bucket_script}')
         subprocess.run(["spark-submit", "/tmp/spark_script.py", "--event", json.dumps(event)], check=True, env=os.environ)
@@ -85,4 +85,3 @@ def lambda_handler(event, context):
     
     # Set the environment variables for the Spark application
     spark_submit(s3_bucket_script,input_script, event)
-   
