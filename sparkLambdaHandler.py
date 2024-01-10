@@ -14,17 +14,16 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-def get_list_of_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> None:
+def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> None:
     s3 = boto3.resource("s3")
-    unprocessed_files = []
     try:
         content = s3.Object(s3_bucket_script, unprocessed_file_key).get()['Body'].read()
-        for file in content:
-            unprocessed_files.append(file)
+        logger.info(f'Unprocessed files: {content}')
     except botocore.exceptions.ClientError as e:
         logger.info(f"Error: {e.response['Error']['Code']}")
+    logger.info(f'Now deleting file {unprocessed_file_key}')
     s3.Object(s3_bucket_script, unprocessed_file_key).delete()
-    return unprocessed_files
+    return content
     
 def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
     """
@@ -78,8 +77,8 @@ def lambda_handler(event, context):
     input_script = os.environ['SPARK_SCRIPT']
     
     unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
-    unprocessed_files = get_list_of_unprocessed_files(s3_bucket_script,unprocessed_file_key)
-    os.environ['INPUT_PATH_LIST'] = unprocessed_files
+    unprocessed_files = get_unprocessed_files(s3_bucket_script,unprocessed_file_key)
+    os.environ['INPUT_PATHS'] = unprocessed_files
 
     s3_script_download(s3_bucket_script,input_script)
     
