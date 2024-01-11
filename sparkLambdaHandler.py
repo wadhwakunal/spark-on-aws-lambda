@@ -5,18 +5,36 @@ import os
 import subprocess
 import logging
 import json
+import time
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
+#handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+#handler.setFormatter(formatter)
+#logger.addHandler(handler)
 
-def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> None:
-    s3 = boto3.resource("s3")
+def add_delay_to_execution(unprocessed_file_key: str) -> None:
     try:
+        logger.info('Inside function add_delay_to_execution')
+        s3 = boto3.resource("s3")
+        last_modified_date = s3.Object(s3_bucket_script, unprocessed_file_key).last_modified
+        current_modified_date = ""
+        i = 1
+        while current_modified_date != last_modified_date:
+            time.sleep(5)
+            current_modified_date = last_modified_date
+            last_modified_date = s3.Object(s3_bucket_script, unprocessed_file_key).last_modified
+            logger.info(f'Iteration : {i}, last_modified_date: {last_modified_date}, current_modified_date: {current_modified_date}')
+            i = i + 1
+    except botocore.exceptions.ClientError as e:
+        logger.info(f"Error: {e.response['Error']['Code']}")
+            
+def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> str:
+    try:
+        logger.info('Inside function get_unprocessed_files')
+        s3 = boto3.resource("s3")
         content = s3.Object(s3_bucket_script, unprocessed_file_key).get()['Body'].read().decode('utf-8')
         logger.info(f'Unprocessed files: {content}')
         logger.info(f'Now deleting file {unprocessed_file_key}')
@@ -28,12 +46,10 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> No
 def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
     """
     """
-    s3_client = boto3.resource("s3")
-
     try:
         logger.info(f'Now downloading script {input_script} in {s3_bucket_script} to /tmp')
-        s3_client.Bucket(s3_bucket_script).download_file(input_script, "/tmp/spark_script.py")
-      
+        s3_client = boto3.resource("s3")
+        s3_client.Bucket(s3_bucket_script).download_file(input_script, "/tmp/spark_script.py")    
     except Exception as e :
         logger.error(f'Error downloading the script {input_script} in {s3_bucket_script}: {e}')
     else:
@@ -76,11 +92,17 @@ def lambda_handler(event, context):
     s3_bucket_script = os.environ['SCRIPT_BUCKET']
     input_script = os.environ['SPARK_SCRIPT']
     
+    #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
     unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
     
+    #Add delay to the function execution
+    add_delay_to_execution(unprocessed_file_key)
+    
+    #Get all the unprocessed files as string(each filename in a new line)
     unprocessed_files = get_unprocessed_files(s3_bucket_script,unprocessed_file_key)
     os.environ['INPUT_PATHS'] = unprocessed_files
 
+    #Download Spark script from S3 to local
     s3_script_download(s3_bucket_script,input_script)
     
     # Set the environment variables for the Spark application
