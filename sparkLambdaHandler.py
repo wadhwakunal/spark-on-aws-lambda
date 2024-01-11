@@ -15,7 +15,7 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 #handler.setFormatter(formatter)
 #logger.addHandler(handler)
 
-def add_delay_to_execution(unprocessed_file_key: str) -> None:
+def add_delay_to_execution(s3_bucket_script,unprocessed_file_key: str) -> None:
     try:
         logger.info('Inside function add_delay_to_execution')
         s3 = boto3.resource("s3")
@@ -96,7 +96,7 @@ def lambda_handler(event, context):
     unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
     
     #Add delay to the function execution
-    add_delay_to_execution(unprocessed_file_key)
+    add_delay_to_execution(s3_bucket_script,unprocessed_file_key)
     
     #Get all the unprocessed files as string(each filename in a new line)
     unprocessed_files = get_unprocessed_files(s3_bucket_script,unprocessed_file_key)
