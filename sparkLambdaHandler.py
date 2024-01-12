@@ -14,22 +14,6 @@ logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 #handler.setFormatter(formatter)
 #logger.addHandler(handler)
-
-def add_delay_to_execution(s3_bucket_script,unprocessed_file_key: str) -> None:
-    try:
-        logger.info('Inside function add_delay_to_execution')
-        s3 = boto3.resource("s3")
-        last_modified_date = s3.Object(s3_bucket_script, unprocessed_file_key).last_modified
-        current_modified_date = ""
-        i = 1
-        while current_modified_date != last_modified_date:
-            time.sleep(5)
-            current_modified_date = last_modified_date
-            last_modified_date = s3.Object(s3_bucket_script, unprocessed_file_key).last_modified
-            logger.info(f'Iteration : {i}, last_modified_date: {last_modified_date}, current_modified_date: {current_modified_date}')
-            i = i + 1
-    except botocore.exceptions.ClientError as e:
-        logger.info(f"Error: {e.response['Error']['Code']}")
             
 def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> str:
     try:
@@ -41,7 +25,11 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         s3.Object(s3_bucket_script, unprocessed_file_key).delete()
         return content
     except botocore.exceptions.ClientError as e:
-        logger.info(f"Error: {e.response['Error']['Code']}")
+        logger.error(f"Boto Error: {e.response['Error']['Code']}")
+    except Exception as e :
+        logger.error(f"Error: {e}")
+    else:
+        logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
     
 def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
     """
@@ -93,13 +81,11 @@ def lambda_handler(event, context):
     input_script = os.environ['SPARK_SCRIPT']
     
     #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
+    unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
     unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
     
-    #Add delay to the function execution
-    add_delay_to_execution(s3_bucket_script,unprocessed_file_key)
-    
     #Get all the unprocessed files as string(each filename in a new line)
-    unprocessed_files = get_unprocessed_files(s3_bucket_script,unprocessed_file_key)
+    unprocessed_files = get_unprocessed_files(unprocessed_file_bucket,unprocessed_file_key)
     os.environ['INPUT_PATHS'] = unprocessed_files
 
     #Download Spark script from S3 to local
