@@ -44,7 +44,7 @@ def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
         logger.info(f'Script {input_script} successfully downloaded to /tmp')
 
 def write_content_to_s3_file(s3_bucket: str,s3_key: str,content: str) -> None:
-    logger.info(f"Writing file to content {s3_key}")
+    logger.info(f"Writing content to file {s3_key}")
     try:
         s3_client = boto3.resource("s3")
         s3_client.Bucket(s3_bucket).put_object(Key=s3_key, Body=content.encode("utf-8"))
@@ -52,6 +52,8 @@ def write_content_to_s3_file(s3_bucket: str,s3_key: str,content: str) -> None:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
     except Exception as e :
         logger.error(f"Error: {e}")
+    else:
+        logger.info(f'Successfully written content to file {s3_key}')
 
 def read_content_from_s3_file(s3_bucket: str,s3_key: str) -> str:
     logger.info(f"Reading content from file {s3_key}")
@@ -65,6 +67,20 @@ def read_content_from_s3_file(s3_bucket: str,s3_key: str) -> str:
     except Exception as e :
         logger.error(f"Error: {e}")
         return ""
+    else:
+        logger.info(f'Successfully read content from file {s3_key}')
+
+def delete_file_from_s3(s3_bucket: str,s3_key: str) -> None:
+    logger.info(f"Deleting file {s3_key}")
+    try:
+        s3_client = boto3.resource("s3")
+        s3_client.Object(s3_bucket, s3_key).delete()
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"Boto Error: {e.response['Error']['Code']}")
+    except Exception as e :
+        logger.error(f"Error: {e}")
+    else:
+        logger.info(f'Successfully deleted file {s3_key}')
 
 def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
     """
@@ -89,6 +105,9 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
+        logger.info(f'Deleting error file {event["error_file_key"]}')
+        delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
+        
 
 def lambda_handler(event, context):
 
@@ -113,6 +132,7 @@ def lambda_handler(event, context):
     #Append error content from error file if it exists
     unprocessed_files = unprocessed_files + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
     unprocessed_files = unprocessed_files.rstrip()
+    logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
     os.environ['INPUT_PATHS'] = unprocessed_files
 
     #Download Spark script from S3 to local
