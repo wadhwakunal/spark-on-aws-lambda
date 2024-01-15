@@ -119,7 +119,7 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
-        load_partitions(event['DATABASE_NAME'],event['TABLE_NAME'],event["error_file_bucket"],event["error_file_key"].replace("error_file","query_results"))
+        load_partitions(event['database_name'],event['table_name'],event["error_file_bucket"],event["error_file_key"].replace("error_file","query_results"))
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
         
