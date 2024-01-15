@@ -7,7 +7,7 @@ import logging
 import json
 import time
 import datetime
-import pytz
+import dateutil.tz
 
 # Set up logging
 logger = logging.getLogger()
@@ -141,7 +141,8 @@ def raise_alert():
         logger.info("Inside function raise_alert")
         ses_client = boto3.client("ses")
         CHARSET = "UTF-8"
-        current_timestamp = datetime.datetime.now(pytz.timezone("Asia/Calcutta"))
+        ist_tz = dateutil.tz.gettz('Asia/Calcutta')
+        current_timestamp = datetime.datetime.now(tz=ist_tz)
     
         response = ses_client.send_email(
             Destination={
