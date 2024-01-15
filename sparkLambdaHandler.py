@@ -112,6 +112,7 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
     try:
         logger.info(f'Spark-Submitting the Spark script {input_script} from {s3_bucket_script}')
         subprocess.run(["spark-submit", "/tmp/spark_script.py", "--event", json.dumps(event)], check=True, env=os.environ)
+        load_partitions(event['database_name'],event['table_name'],event["error_file_bucket"],event["error_file_key"].replace("error_file","query_results"))
     except Exception as e :
         logger.error(f'Error Spark-Submit with exception: {e}')
         logger.info(f'Writing unprocessed_file content to the error file: {event["error_file_key"]}')
@@ -119,9 +120,34 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
-        load_partitions(event['database_name'],event['table_name'],event["error_file_bucket"],event["error_file_key"].replace("error_file","query_results"))
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
+
+def send_plain_email():
+    logger.info("Inside function send_plain_email")
+    ses_client = boto3.client("ses")
+    CHARSET = "UTF-8"
+
+    response = ses_client.send_email(
+        Destination={
+            "ToAddresses": [
+                "kunal.wadhwa@sportsbaazi.com",
+            ],
+        },
+        Message={
+            "Body": {
+                "Text": {
+                    "Charset": CHARSET,
+                    "Data": "Hello, world!",
+                }
+            },
+            "Subject": {
+                "Charset": CHARSET,
+                "Data": "Amazing Email Tutorial",
+            },
+        },
+        Source="bb-datalake@sportsbaazi.com"
+    )
         
 
 def lambda_handler(event, context):
@@ -134,6 +160,7 @@ def lambda_handler(event, context):
     """
 
     logger.info("******************Start AWS Lambda Handler************")
+    send_plain_email()
     s3_bucket_script = os.environ['SCRIPT_BUCKET']
     input_script = os.environ['SPARK_SCRIPT']
     database_name = os.environ['DATABASE_NAME']
