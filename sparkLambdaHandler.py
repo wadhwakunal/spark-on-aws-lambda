@@ -82,6 +82,20 @@ def delete_file_from_s3(s3_bucket: str,s3_key: str) -> None:
     else:
         logger.info(f'Successfully deleted file {s3_key}')
 
+def load_partitions(database_name: str,table_name: str,query_result_bucket: str,query_result_key: str) -> None:
+    logger.info(f'Loading partitions of table: {database_name}.{table_name}')
+    try:
+        athena_client = boto3.resource("athena")
+        query = f'MSCK REPAIR TABLE {database_name}.{table_name}'
+        query_output_location = f"s3://{query_result_bucket}/{query_result_key}/"
+        athena_client.start_query_execution(QueryString=query,QueryExecutionContext={'Database': database_name},ResultConfiguration={'OutputLocation': query_output_location})
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"Boto Error: {e.response['Error']['Code']}")
+    except Exception as e :
+        logger.error(f"Error: {e}")
+    else:
+        logger.info(f'Successfully loaded partitions in table {database_name}.{table_name}')
+
 def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
     """
     Submits a local Spark script using spark-submit.
@@ -105,6 +119,7 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
+        load_partitions(event['DATABASE_NAME'],event['TABLE_NAME'],event["error_file_bucket"],event["error_file_key"].replace("error_file","query_results"))
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
         
@@ -121,6 +136,8 @@ def lambda_handler(event, context):
     logger.info("******************Start AWS Lambda Handler************")
     s3_bucket_script = os.environ['SCRIPT_BUCKET']
     input_script = os.environ['SPARK_SCRIPT']
+    database_name = os.environ['DATABASE_NAME']
+    table_name = os.environ['TABLE_NAME']
     
     #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
     unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
@@ -141,4 +158,6 @@ def lambda_handler(event, context):
     # Set the environment variables for the Spark application
     event['error_file_bucket'] = unprocessed_file_bucket
     event['error_file_key'] = unprocessed_file_key.replace("unprocessed_file","error_file")
+    event['database_name'] = database_name
+    event['table_name'] = table_name
     spark_submit(s3_bucket_script,input_script, event)
