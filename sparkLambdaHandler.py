@@ -7,6 +7,7 @@ import logging
 import json
 import time
 import datetime
+import pytz
 
 # Set up logging
 logger = logging.getLogger()
@@ -140,7 +141,7 @@ def raise_alert():
         logger.info("Inside function raise_alert")
         ses_client = boto3.client("ses")
         CHARSET = "UTF-8"
-        current_timestamp = datetime.datetime.now()
+        current_timestamp = datetime.datetime.now(pytz.timezone("Asia/Calcutta"))
     
         response = ses_client.send_email(
             Destination={
@@ -207,4 +208,5 @@ def lambda_handler(event, context):
         spark_submit(s3_bucket_script,input_script, event)
     except Exception as e :
         raise_alert()
+        raise e
         
