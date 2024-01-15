@@ -6,6 +6,7 @@ import subprocess
 import logging
 import json
 import time
+import datetime
 
 # Set up logging
 logger = logging.getLogger()
@@ -26,8 +27,10 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         return content
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
+        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
+        raise e
     else:
         logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
     
@@ -40,6 +43,7 @@ def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
         s3_client.Bucket(s3_bucket_script).download_file(input_script, "/tmp/spark_script.py")    
     except Exception as e :
         logger.error(f'Error downloading the script {input_script} in {s3_bucket_script}: {e}')
+        raise e
     else:
         logger.info(f'Script {input_script} successfully downloaded to /tmp')
 
@@ -50,8 +54,10 @@ def write_content_to_s3_file(s3_bucket: str,s3_key: str,content: str) -> None:
         s3_client.Bucket(s3_bucket).put_object(Key=s3_key, Body=content.encode("utf-8"))
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
+        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
+        raise e
     else:
         logger.info(f'Successfully written content to file {s3_key}')
 
@@ -64,9 +70,11 @@ def read_content_from_s3_file(s3_bucket: str,s3_key: str) -> str:
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
         return ""
+        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
         return ""
+        raise e
     else:
         logger.info(f'Successfully read content from file {s3_key}')
 
@@ -77,8 +85,10 @@ def delete_file_from_s3(s3_bucket: str,s3_key: str) -> None:
         s3_client.Object(s3_bucket, s3_key).delete()
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
+        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
+        raise e
     else:
         logger.info(f'Successfully deleted file {s3_key}')
 
@@ -91,8 +101,10 @@ def load_partitions(database_name: str,table_name: str,query_result_bucket: str,
         athena_client.start_query_execution(QueryString=query,QueryExecutionContext={'Database': database_name},ResultConfiguration={'OutputLocation': query_output_location})
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
+        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
+        raise e
     else:
         logger.info(f'Successfully loaded partitions in table {database_name}.{table_name}')
 
@@ -123,31 +135,37 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
 
-def send_plain_email():
-    logger.info("Inside function send_plain_email")
-    ses_client = boto3.client("ses")
-    CHARSET = "UTF-8"
-
-    response = ses_client.send_email(
-        Destination={
-            "ToAddresses": [
-                "kunal.wadhwa@sportsbaazi.com",
-            ],
-        },
-        Message={
-            "Body": {
-                "Text": {
+def raise_alert():
+    try:
+        logger.info("Inside function raise_alert")
+        ses_client = boto3.client("ses")
+        CHARSET = "UTF-8"
+        current_timestamp = datetime.datetime.now()
+    
+        response = ses_client.send_email(
+            Destination={
+                "ToAddresses": [
+                    "kunal.wadhwa@sportsbaazi.com",
+                    "gautam.dey@sportsbaazi.com",
+                    "siddharth.tripathi@sportsbaazi.com"
+                ],
+            },
+            Message={
+                "Body": {
+                    "Text": {
+                        "Charset": CHARSET,
+                        "Data": "Error in Spark Lambda to process bb_market data.",
+                    }
+                },
+                "Subject": {
                     "Charset": CHARSET,
-                    "Data": "Hello, world!",
-                }
+                    "Data": f"Error: bb_market processing {current_timestamp}",
+                },
             },
-            "Subject": {
-                "Charset": CHARSET,
-                "Data": "Amazing Email Tutorial",
-            },
-        },
-        Source="bb-datalake@sportsbaazi.com"
-    )
+            Source="bb-datalake@sportsbaazi.com"
+        )
+    except Exception as e :
+        logger.error(f'Error in raising alert: {e}')
         
 
 def lambda_handler(event, context):
@@ -158,33 +176,35 @@ def lambda_handler(event, context):
     from Amazon S3 location and spark submitting 
     the script in AWS Lambda
     """
-
-    logger.info("******************Start AWS Lambda Handler************")
-    send_plain_email()
-    s3_bucket_script = os.environ['SCRIPT_BUCKET']
-    input_script = os.environ['SPARK_SCRIPT']
-    database_name = os.environ['DATABASE_NAME']
-    table_name = os.environ['TABLE_NAME']
+    try:
+        logger.info("******************Start AWS Lambda Handler************")
+        s3_bucket_script = os.environ['SCRIPT_BUCKET']
+        input_script = os.environ['SPARK_SCRIPT']
+        database_name = os.environ['DATABASE_NAME']
+        table_name = os.environ['TABLE_NAME']
+        
+        #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
+        unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
+        unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
+        
+        #Get all the unprocessed files as string(each filename in a new line)
+        unprocessed_files = get_unprocessed_files(unprocessed_file_bucket,unprocessed_file_key)
+        
+        #Append error content from error file if it exists
+        unprocessed_files = unprocessed_files + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
+        unprocessed_files = unprocessed_files.rstrip()
+        logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
+        os.environ['INPUT_PATHS'] = unprocessed_files
     
-    #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
-    unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    unprocessed_file_key = event["Records"][0]["s3"]["object"]["key"]
-    
-    #Get all the unprocessed files as string(each filename in a new line)
-    unprocessed_files = get_unprocessed_files(unprocessed_file_bucket,unprocessed_file_key)
-    
-    #Append error content from error file if it exists
-    unprocessed_files = unprocessed_files + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
-    unprocessed_files = unprocessed_files.rstrip()
-    logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
-    os.environ['INPUT_PATHS'] = unprocessed_files
-
-    #Download Spark script from S3 to local
-    s3_script_download(s3_bucket_script,input_script)
-    
-    # Set the environment variables for the Spark application
-    event['error_file_bucket'] = unprocessed_file_bucket
-    event['error_file_key'] = unprocessed_file_key.replace("unprocessed_file","error_file")
-    event['database_name'] = database_name
-    event['table_name'] = table_name
-    spark_submit(s3_bucket_script,input_script, event)
+        #Download Spark script from S3 to local
+        s3_script_download(s3_bucket_script,input_script)
+        
+        # Set the environment variables for the Spark application
+        event['error_file_bucket'] = unprocessed_file_bucket
+        event['error_file_key'] = unprocessed_file_key.replace("unprocessed_file","error_file")
+        event['database_name'] = database_name
+        event['table_name'] = table_name
+        spark_submit(s3_bucket_script,input_script, event)
+    except Exception as e :
+        raise_alert()
+        
