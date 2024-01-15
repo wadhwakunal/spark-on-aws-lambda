@@ -85,7 +85,7 @@ def delete_file_from_s3(s3_bucket: str,s3_key: str) -> None:
 def load_partitions(database_name: str,table_name: str,query_result_bucket: str,query_result_key: str) -> None:
     logger.info(f'Loading partitions of table: {database_name}.{table_name}')
     try:
-        athena_client = boto3.resource("athena")
+        athena_client = boto3.client("athena")
         query = f'MSCK REPAIR TABLE {database_name}.{table_name}'
         query_output_location = f"s3://{query_result_bucket}/{query_result_key}/"
         athena_client.start_query_execution(QueryString=query,QueryExecutionContext={'Database': database_name},ResultConfiguration={'OutputLocation': query_output_location})
