@@ -136,7 +136,7 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
 
-def raise_alert():
+def raise_alert(job_name,error):
     try:
         logger.info("Inside function raise_alert")
         ses_client = boto3.client("ses")
@@ -156,7 +156,7 @@ def raise_alert():
                 "Body": {
                     "Text": {
                         "Charset": CHARSET,
-                        "Data": "Error in Spark Lambda to process bb_market data.",
+                        "Data": f"Error in Spark Lambda to process {job_name} data \n {error}",
                     }
                 },
                 "Subject": {
@@ -208,6 +208,5 @@ def lambda_handler(event, context):
         event['table_name'] = table_name
         spark_submit(s3_bucket_script,input_script, event)
     except Exception as e :
-        raise_alert()
+        raise_alert(table_name,e)
         raise e
-        
