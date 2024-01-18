@@ -161,7 +161,7 @@ def raise_alert(job_name,error):
                 },
                 "Subject": {
                     "Charset": CHARSET,
-                    "Data": f"Error: bb_market processing {current_timestamp}",
+                    "Data": f"Error: {job_name} processing {current_timestamp}",
                 },
             },
             Source="bb-datalake@sportsbaazi.com"
