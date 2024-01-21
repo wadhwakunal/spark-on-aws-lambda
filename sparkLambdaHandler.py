@@ -71,11 +71,9 @@ def read_content_from_s3_file(s3_bucket: str,s3_key: str) -> str:
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
         return ""
-        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
         return ""
-        raise e
     else:
         logger.info(f'Successfully read content from file {s3_key}')
 
@@ -86,10 +84,8 @@ def delete_file_from_s3(s3_bucket: str,s3_key: str) -> None:
         s3_client.Object(s3_bucket, s3_key).delete()
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
-        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
-        raise e
     else:
         logger.info(f'Successfully deleted file {s3_key}')
 
@@ -102,10 +98,8 @@ def load_partitions(database_name: str,table_name: str,query_result_bucket: str,
         athena_client.start_query_execution(QueryString=query,QueryExecutionContext={'Database': database_name},ResultConfiguration={'OutputLocation': query_output_location})
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
-        raise e
     except Exception as e :
         logger.error(f"Error: {e}")
-        raise e
     else:
         logger.info(f'Successfully loaded partitions in table {database_name}.{table_name}')
 
