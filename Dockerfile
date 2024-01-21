@@ -5,6 +5,7 @@ FROM public.ecr.aws/lambda/python:3.8
 ARG HADOOP_VERSION=3.2.4
 ARG AWS_SDK_VERSION=1.11.901
 ARG PYSPARK_VERSION=3.3.0
+ARG DELTA_VERSION=2.3.0
 
 # Perform system updates and install dependencies
 RUN yum update -y && \
@@ -28,7 +29,7 @@ ENV PATH=$SPARK_HOME/python:$PATH
 
 COPY download_jars.sh /tmp
 RUN chmod +x /tmp/download_jars.sh && \
-    /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION
+    /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION $DELTA_VERSION
 
 
 ENV PATH=${PATH}:${JAVA_HOME}/bin
