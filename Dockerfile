@@ -16,6 +16,7 @@ RUN yum update -y && \
     yum -y install java-1.8.0-openjdk && \
     pip install --upgrade pip && pip install boto3 && \
     pip install pyspark==$PYSPARK_VERSION && \
+	pip install delta-spark==$DELTA_VERSION && \
     yum clean all
 
 
