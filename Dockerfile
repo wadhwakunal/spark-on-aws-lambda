@@ -29,7 +29,8 @@ ENV PATH=$SPARK_HOME/python:$PATH
 
 
 COPY download_jars.sh /tmp
-RUN chmod +x /tmp/download_jars.sh && \
+RUN chmod -R 777 /var/task/spark-warehouse && \
+	chmod +x /tmp/download_jars.sh && \
     /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION $DELTA_VERSION
 
 
