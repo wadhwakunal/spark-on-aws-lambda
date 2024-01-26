@@ -32,6 +32,7 @@ COPY download_jars.sh /tmp
 RUN mkdir -p /tmp/derby && chmod +rw /tmp/derby && chmod +x /tmp/download_jars.sh && \
     /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION $DELTA_VERSION
 
+COPY derby.properties /var/task
 
 ENV PATH=${PATH}:${JAVA_HOME}/bin
 
