@@ -29,7 +29,7 @@ ENV PATH=$SPARK_HOME/python:$PATH
 
 
 COPY download_jars.sh /tmp
-RUN chmod +x /tmp/download_jars.sh && \
+RUN mkdir -p /tmp/derby && chmod +rw /tmp/derby && chmod +x /tmp/download_jars.sh && \
     /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION $DELTA_VERSION
 
 
