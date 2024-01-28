@@ -12,6 +12,12 @@ Parameters:
   SparkScript:
     Type: String
     Description: 'Mandatory: Amazon S3 key where the spark script resides. Start without the /.eg: script/location/name.py'
+  DatabaseName:
+    Type: String
+    Description: 'Mandatory: Glue Catalog Database where the table resides e.g. bb_datalake_validated'
+  TableName:
+    Type: String
+    Description: 'Mandatory: Glue Catalog output table e.g. bb_markets'
   LambdaFunctionPrefix:
     Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
     Type: String
@@ -65,63 +71,6 @@ Conditions:
   HasWorkingDirectory: !Not  [ !Equals [ '', !Ref WorkingDirectory ] ]
 
 Resources:
-
-  LambdaRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: 'Role used by the lambda running spark'
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-        - !If
-            - "HasAdditionalPolicy"
-            - !Ref SparkLambdapermissionPolicyArn
-            - !Ref "AWS::NoValue"
-        - !If
-            - NeedsVPC
-            - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-            - !Ref "AWS::NoValue"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - 'lambda.amazonaws.com'
-            Action: 'sts:AssumeRole'
-
-  LambdaPolicy:
-    Type: 'AWS::IAM::Policy'
-    Properties:
-      PolicyName: !Sub 'SparkOnLmandaDefaulPolicy-${AWS::StackName}'
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Action:
-              - ecr:GetAuthorizationToken
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - ecr:BatchCheckLayerAvailability
-              - ecr:GetDownloadUrlForLayer
-              - ecr:BatchGetImage
-            Resource:
-              Fn::Sub:
-                - "arn:aws:ecr:${Region}:${Account}:repository/${RepositoryName}"
-                - Region: !Select [3, !Split [".", !Ref ImageUri ]]
-                  Account: !Select [0, !Split [".", !Ref ImageUri ]]
-                  RepositoryName: !Select [1, !Split ["/", !Select [ 0, !Split [":", !Select [5, !Split [".", !Ref ImageUri ]]]]]]
-
-          - Effect: Allow
-            Action:
-              - s3:ListBucket
-            Resource: !Sub 'arn:aws:s3:::${ScriptBucket}'
-          - Effect: Allow
-            Action:
-              - s3:Get*
-            Resource: !Sub 'arn:aws:s3:::${ScriptBucket}/${SparkScript}'
-      Roles:
-        - !Ref LambdaRole
-
   SparkLambda:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -143,7 +92,8 @@ Resources:
       Description: "Lambda to run spark containers"
       Timeout: !Ref LambdaTimeout
       MemorySize: !Ref LambdaMemory
-      Role: !GetAtt LambdaRole.Arn
+      Role: "arn:aws:iam::647554026283:role/service-role/datalake-lambda-s3-permission"
+      ReservedConcurrentExecutions: 1
       VpcConfig:
         !If
           - NeedsVPC
@@ -155,6 +105,12 @@ Resources:
         Variables:
           SCRIPT_BUCKET: !Ref ScriptBucket
           SPARK_SCRIPT: !Ref SparkScript
-          #INPUT_PATH: !Ref InputPath
-          #OUTPUT_PATH: !Ref OutputPath
+          DATABASE_NAME: !Ref DatabaseName
+          TABLE_NAME: !Ref TableName
+  SparkLambdaInvokeConfig:
+    Type: 'AWS::Lambda::EventInvokeConfig'
+    Properties:
+      FunctionName: !Ref SparkLambda
+      MaximumRetryAttempts: 0
+      Qualifier: "$LATEST"
 
