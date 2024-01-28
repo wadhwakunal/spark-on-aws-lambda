@@ -29,12 +29,9 @@ ENV PATH=$SPARK_HOME/python:$PATH
 
 
 COPY download_jars.sh /tmp
-RUN mkdir -p /tmp/derby && chmod +rw /tmp/derby && chmod +x /tmp/download_jars.sh && \
+RUN chmod +x /tmp/download_jars.sh && \
     /tmp/download_jars.sh $SPARK_HOME $HADOOP_VERSION $AWS_SDK_VERSION $DELTA_VERSION
 
-COPY derby.properties /var/task
-COPY derby.log /tmp/derby
-RUN chmod +rwx /tmp/derby/derby.log
 
 ENV PATH=${PATH}:${JAVA_HOME}/bin
 
