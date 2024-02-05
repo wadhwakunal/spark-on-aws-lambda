@@ -258,7 +258,7 @@ Resources:
       Timeout: 50
 
   FilesCollectorInvokeS3TriggerLambda:
-    Type: 'Custom::InvokeS3TriggerLambda'
+    Type: 'Custom::InvokeFilesCollectorS3TriggerLambda'
     DependsOn: FilesCollectorLambdaInvokePermission
     Properties:
       ServiceToken: !GetAtt FilesCollectorS3TriggerLambda.Arn
