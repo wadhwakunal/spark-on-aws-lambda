@@ -23,8 +23,8 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         s3 = boto3.resource("s3")
         content = s3.Object(s3_bucket_script, unprocessed_file_key).get()['Body'].read().decode('utf-8')
         logger.info(f'Unprocessed files: {content}')
-        logger.info(f'Now deleting file {unprocessed_file_key}')
-        s3.Object(s3_bucket_script, unprocessed_file_key).delete()
+        #logger.info(f'Now deleting file {unprocessed_file_key}')
+        #s3.Object(s3_bucket_script, unprocessed_file_key).delete()
         return content
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
@@ -121,8 +121,8 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         load_partitions(event['database_name'],event['table_name'],event['athena_workgroup'])
     except Exception as e :
         logger.error(f'Error Spark-Submit with exception: {e}')
-        logger.info(f'Writing unprocessed_file content to the error file: {event["error_file_key"]}')
-        write_content_to_s3_file(event["error_file_bucket"],event["error_file_key"],os.environ['INPUT_PATHS'])
+        #logger.info(f'Writing unprocessed_file content to the error file: {event["error_file_key"]}')
+        #write_content_to_s3_file(event["error_file_bucket"],event["error_file_key"],os.environ['INPUT_PATHS'])
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
@@ -203,5 +203,5 @@ def lambda_handler(event, context):
         event['athena_workgroup'] = athena_workgroup
         spark_submit(s3_bucket_script,input_script, event)
     except Exception as e :
-        raise_alert(table_name,e)
+        #raise_alert(table_name,e)
         raise e
