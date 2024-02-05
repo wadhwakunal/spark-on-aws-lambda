@@ -111,26 +111,6 @@ Parameters:
     Type: String
     Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
     Default: Append
-
-Command:
-    Description: 'Optional: Command override for the image. This is not required'
-    Type: 'CommaDelimitedList'
-    Default: "/var/task/sparkLambdaHandler.lambda_handler"
-  EntryPoint:
-    Description: 'Optional: Entry Point override for the image'
-    Type: 'CommaDelimitedList'
-    Default: ''
-  WorkingDirectory:
-    Description: 'Optional: Command override for the image'
-    Type: 'String'
-    Default: ''
-
-Conditions:
-  NeedsVPC:  !Equals [ !Ref SparkLambdaAttachToVpc, 'True' ]
-  HasAdditionalPolicy: !Not  [ !Equals [ '', !Ref SparkLambdapermissionPolicyArn ] ]
-  NeedsImageBuild: !Not [ !Equals [ !Ref SparkLambdaImageUri, '' ]]
-  HasEntryPoint: !Not  [ !Equals [ '' , !Join [ ',',  !Ref EntryPoint ] ] ]
-  HasWorkingDirectory: !Not  [ !Equals [ '', !Ref WorkingDirectory ] ]
   
 Resources:
   FilesCollectorLambda:
