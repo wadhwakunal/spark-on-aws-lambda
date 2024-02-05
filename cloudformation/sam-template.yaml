@@ -53,6 +53,86 @@ Parameters:
     Type: String
     Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
     Default: Append
+  SparkLambdaImageUri:
+    Description: 'Mandatory: ECR Uri for the image. If not present, then create and push using the sam-imagebuilder.yaml in the github https://github.com/aws-samples/spark-on-aws-lambda '
+    Type: String
+    Default: ''
+  SparkLambdaScriptBucket:
+    Type: String
+    Description: 'Mandatory: Amazon S3 Bucket name where the spark script is stored. Just the bucket name e.g. bucket1'
+  SparkLambdaSparkScript:
+    Type: String
+    Description: 'Mandatory: Amazon S3 key where the spark script resides. Start without the /.eg: script/location/name.py'
+  SparkLambdaDatabaseName:
+    Type: String
+    Description: 'Mandatory: Glue Catalog Database where the table resides e.g. bb_datalake_validated'
+  SparkLambdaTableName:
+    Type: String
+    Description: 'Mandatory: Glue Catalog output table e.g. bb_markets'
+  SparkLambdaAthenaWorkgroup:
+    Type: String
+    Description: 'Mandatory: Athena Workgroup e.g. bb-datalake'
+  SparkLambdaFunctionPrefix:
+    Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
+    Type: String
+    Default: SparkJob
+  SparkLambdaTimeout:
+    Description: 'Optional: Maximum Lambda invocation runtime in seconds. (min 1 - 900 max)'
+    Default: 900
+    Type: Number
+  SparkLambdaMemory:
+    Description: 'Optional: Lambda memory in MB (min 128 - 3008 max).'
+    Default: 3008
+    Type: Number
+  SparkLambdapermissionPolicyArn:
+    Description: 'Optional: Arn of the policy that contains the permissions your spark job will need to run successfully'
+    Type: String
+    Default: ''
+  SparkLambdaAttachToVpc:
+    Type: String
+    Description: 'Mandatory: Set True or False to imply VPC Connectivity'
+    Default: False
+    AllowedValues:
+      - True
+      - False
+  SparkLambdaSecurityGroupIds:
+    Description: 'Optional: One or more SecurityGroup IDs corresponding to the SecurityGroup that should be applied to the Lambda function. (e.g. sg1,sg2,sg3).Only used if AttachToVpc is True'
+    Type: 'CommaDelimitedList'
+    Default: ''
+  SparkLambdaSubnetIds:
+    Description: 'Optional: One or more Subnet IDs corresponding to the Subnet that the Lambda function can use to access you data source. (e.g. subnet1,subnet2).Only used if AttachToVpc is True'
+    Type: 'CommaDelimitedList'
+    Default: ''
+  SparkLambdaTriggerFile:
+    Type: String
+    Description: 'Optional: File to trigger Spark Lambda e.g. unprocessed_file'
+    Default: unprocessed_file
+  SparkLambdaNotificationsSaveMode:
+    Type: String
+    Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
+    Default: Append
+
+Command:
+  Description: 'Optional: Command override for the image. This is not required'
+  Type: 'CommaDelimitedList'
+  Default: "/var/task/sparkLambdaHandler.lambda_handler"
+
+EntryPoint:
+  Description: 'Optional: Entry Point override for the image'
+  Type: 'CommaDelimitedList'
+  Default: ''
+  
+WorkingDirectory:
+  Description: 'Optional: Command override for the image'
+  Type: 'String'
+  Default: ''
+
+Conditions:
+  NeedsVPC:  !Equals [ !Ref SparkLambdaAttachToVpc, 'True' ]
+  HasAdditionalPolicy: !Not  [ !Equals [ '', !Ref SparkLambdapermissionPolicyArn ] ]
+  NeedsImageBuild: !Not [ !Equals [ !Ref SparkLambdaImageUri, '' ]]
+  HasEntryPoint: !Not  [ !Equals [ '' , !Join [ ',',  !Ref EntryPoint ] ] ]
+  HasWorkingDirectory: !Not  [ !Equals [ '', !Ref WorkingDirectory ] ]
   
 Resources:
   FilesCollectorLambda:
@@ -478,3 +558,162 @@ Resources:
       SourceBucketName: !Ref FilesMergerSourceBucketName
       NotificationsSaveMode: !Ref FilesMergerNotificationsSaveMode
       FilesMergerTriggerFilePattern: !Sub '${FilesCollectorMetadataKeyName}/${FilesMergerTriggerFile}'
+  
+  SparkLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub '${SparkLambdaFunctionPrefix}-${AWS::StackName}'
+      ImageUri: !Ref SparkLambdaImageUri
+      ImageConfig:
+        Command: !Ref Command
+        EntryPoint:
+          !If
+            - HasEntryPoint
+            - !Ref EntryPoint
+            - !Ref "AWS::NoValue"
+        WorkingDirectory:
+          !If
+            - HasWorkingDirectory
+            - !Ref WorkingDirectory
+            - !Ref "AWS::NoValue"
+      Description: "Lambda to run spark containers"
+      Timeout: !Ref SparkLambdaTimeout
+      MemorySize: !Ref SparkLambdaMemory
+      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/service-role/datalake-lambda-s3-permission"
+      ReservedConcurrentExecutions: 1
+      VpcConfig:
+        !If
+          - NeedsVPC
+          -
+            SecurityGroupIds: !Ref SparkLambdaSecurityGroupIds
+            SubnetIds: !Ref SparkLambdaSubnetIds
+          - !Ref "AWS::NoValue"
+      Environment:
+        Variables:
+          SCRIPT_BUCKET: !Ref SparkLambdaScriptBucket
+          SPARK_SCRIPT: !Ref SparkLambdaSparkScript
+          DATABASE_NAME: !Ref SparkLambdaDatabaseName
+          TABLE_NAME: !Ref SparkLambdaTableName
+          ATHENA_WORKGROUP: !Ref SparkLambdaAthenaWorkgroup
+  
+  SparkLambdaInvokeConfig:
+    Type: 'AWS::Lambda::EventInvokeConfig'
+    Properties:
+      FunctionName: !Ref SparkLambda
+      MaximumRetryAttempts: 0
+      Qualifier: "$LATEST"
+
+  SparkLambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt SparkLambda.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${FilesMergerSourceBucketName}'
+
+  SparkLambdaS3TriggerLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketNotification'
+                  - 's3:PutBucketNotification'
+                Resource: !Sub 'arn:aws:s3:::${FilesMergerSourceBucketName}'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+  
+  SparkLambdaS3TriggerLambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: SparkLambdaInvokeConfig
+    Properties:
+      FunctionName: !Sub 'SparkLambdaS3TriggerLambda-${AWS::StackName}'
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+
+          import json
+          import logging
+          import boto3
+          import cfnresponse
+
+          # Set up logging
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+          def lambda_handler(event, context):
+            logger.info("Inside function to add S3 Trigger")
+            logger.info("Received event: " + json.dumps(event, indent=2))
+
+            source_bucket_name = event['ResourceProperties']["SourceBucketName"]
+            target_lambda_arn = event['ResourceProperties']['TargetLambdaArn']
+            notifications_save_mode = event['ResourceProperties']['NotificationsSaveMode']
+            prefix_pattern = event['ResourceProperties']['SparkLambdaTriggerFilePattern']
+            
+            try:
+              lambda_configurations = []
+              if notifications_save_mode.lower() == "insert":
+                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*']})
+              elif notifications_save_mode.lower() == "append":
+                s3_client = boto3.client('s3')
+                existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
+                for config in existing_configurations['LambdaFunctionConfigurations']:
+                  config_dict = {}
+                  config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
+                  config_dict['Events'] = config['Events']
+                  config_dict['Filter'] = config['Filter']
+                  lambda_configurations.append(config_dict)
+                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{prefix_pattern}'}]}}})
+              else:
+                raise Exception("Notifications save mode is invalid. Permissible values: Append/Insert.")
+              logger.info(f"Printing S3 Trigger config: {lambda_configurations}")
+              s3 = boto3.resource('s3')  
+              bucket_notification = s3.BucketNotification(source_bucket_name)
+              response = bucket_notification.put(
+                NotificationConfiguration={
+                  'LambdaFunctionConfigurations': lambda_configurations
+              })
+              responseData={'source_bucket_name':source_bucket_name}
+              responseStatus = 'SUCCESS'
+              logger.info(f"S3 Trigger successfully added for {source_bucket_name}")
+            except Exception as e:
+              responseStatus = 'FAILED'
+              responseData = {'Failure': 'Something bad happened.'}
+              logger.info(f"S3 Trigger failed for {source_bucket_name}: {e}")
+              raise e
+            cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")
+      Runtime: python3.10
+      Description: A function that puts the S3 notification to invoke Spark Lambda.
+      Role: !GetAtt SparkLambdaS3TriggerLambdaRole.Arn
+      Timeout: 50
+
+  SparkLambdaInvokeS3TriggerLambda:
+    Type: 'Custom::InvokeSparkLambdaS3TriggerLambda'
+    DependsOn: SparkLambdaInvokePermission
+    Properties:
+      ServiceToken: !GetAtt SparkLambdaS3TriggerLambda.Arn
+      TargetLambdaArn: !GetAtt SparkLambda.Arn
+      SourceBucketName: !Ref FilesMergerSourceBucketName
+      NotificationsSaveMode: !Ref SparkLambdaNotificationsSaveMode
+      SparkLambdaTriggerFilePattern: !Sub '${FilesCollectorMetadataKeyName}/${SparkLambdaTriggerFile}'
