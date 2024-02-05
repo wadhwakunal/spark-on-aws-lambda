@@ -53,64 +53,6 @@ Parameters:
     Type: String
     Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
     Default: Append
-  SparkLambdaImageUri:
-    Description: 'Mandatory: ECR Uri for the image. If not present, then create and push using the sam-imagebuilder.yaml in the github https://github.com/aws-samples/spark-on-aws-lambda '
-    Type: String
-    Default: ''
-  SparkLambdaScriptBucket:
-    Type: String
-    Description: 'Mandatory: Amazon S3 Bucket name where the spark script is stored. Just the bucket name e.g. bucket1'
-  SparkLambdaSparkScript:
-    Type: String
-    Description: 'Mandatory: Amazon S3 key where the spark script resides. Start without the /.eg: script/location/name.py'
-  SparkLambdaDatabaseName:
-    Type: String
-    Description: 'Mandatory: Glue Catalog Database where the table resides e.g. bb_datalake_validated'
-  SparkLambdaTableName:
-    Type: String
-    Description: 'Mandatory: Glue Catalog output table e.g. bb_markets'
-  SparkLambdaAthenaWorkgroup:
-    Type: String
-    Description: 'Mandatory: Athena Workgroup e.g. bb-datalake'
-  SparkLambdaFunctionPrefix:
-    Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
-    Type: String
-    Default: SparkJob
-  SparkLambdaTimeout:
-    Description: 'Optional: Maximum Lambda invocation runtime in seconds. (min 1 - 900 max)'
-    Default: 900
-    Type: Number
-  SparkLambdaMemory:
-    Description: 'Optional: Lambda memory in MB (min 128 - 3008 max).'
-    Default: 3008
-    Type: Number
-  SparkLambdapermissionPolicyArn:
-    Description: 'Optional: Arn of the policy that contains the permissions your spark job will need to run successfully'
-    Type: String
-    Default: ''
-  SparkLambdaAttachToVpc:
-    Type: String
-    Description: 'Mandatory: Set True or False to imply VPC Connectivity'
-    Default: False
-    AllowedValues:
-      - True
-      - False
-  SparkLambdaSecurityGroupIds:
-    Description: 'Optional: One or more SecurityGroup IDs corresponding to the SecurityGroup that should be applied to the Lambda function. (e.g. sg1,sg2,sg3).Only used if AttachToVpc is True'
-    Type: 'CommaDelimitedList'
-    Default: ''
-  SparkLambdaSubnetIds:
-    Description: 'Optional: One or more Subnet IDs corresponding to the Subnet that the Lambda function can use to access you data source. (e.g. subnet1,subnet2).Only used if AttachToVpc is True'
-    Type: 'CommaDelimitedList'
-    Default: ''
-  SparkLambdaTriggerFile:
-    Type: String
-    Description: 'Optional: File to trigger Spark Lambda e.g. unprocessed_file'
-    Default: unprocessed_file
-  SparkLambdaNotificationsSaveMode:
-    Type: String
-    Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
-    Default: Append
   
 Resources:
   FilesCollectorLambda:
