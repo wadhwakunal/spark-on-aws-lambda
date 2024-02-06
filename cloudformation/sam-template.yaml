@@ -368,8 +368,6 @@ Resources:
             bucket_name = event["Records"][0]["s3"]["bucket"]["name"]
             object_key = event["Records"][0]["s3"]["object"]["key"]
             flag_file = object_key.replace("_tmp","_flag") 
-    
-            sleep_time_secs = os.environ['Sleep_Time']
 
             add_delay_to_execution(bucket_name,flag_file)
             merge_files_content(bucket_name,object_key)
@@ -377,6 +375,7 @@ Resources:
           def add_delay_to_execution(s3_bucket_script: str,object_key: str) -> None:
             try:
               logger.info('Inside function add_delay_to_execution')
+              sleep_time_secs = int(os.environ['Sleep_Time'])
               s3 = boto3.resource("s3")
               last_modified_date = s3.Object(s3_bucket_script, object_key).last_modified
               current_modified_date = ""
@@ -406,16 +405,18 @@ Resources:
                 logger.info(f'{object_key.replace("_tmp","_file")} exists, Content: {content}')
               except botocore.exceptions.ClientError as e:
                 logger.info(f'{object_key.replace("_tmp","_file")} does not exist')
+              objects_scanned = []
               for object in required_objects:
                 if "tmp" in object.key:
                   logger.info(f'Merging file: {object.key}')
                   content = content + object.get()['Body'].read().decode('utf-8') + "\n"
+                  objects_scanned.append(object)
               content = content.strip()
               logger.info(f'Merged content: {content}')
               logger.info(f'Writing merged content to file: {object_key.replace("_tmp","_file")}')
               s3.Bucket(bucket_name).put_object(Key=object_key.replace("_tmp","_file"), Body=content.encode('utf-8'))
               logger.info('Deleting tmp files')
-              for object in required_objects:
+              for object in objects_scanned:
                 if "tmp" in object.key:
                   logger.info(f'Deleting file: {object.key}')
                   object.delete()
