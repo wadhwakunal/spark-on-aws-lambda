@@ -191,7 +191,7 @@ Resources:
                 new_file_name = (s3_path.replace("_tmp","")).replace(file_name,"")+f"tmp_{body_flag_file}_{file_name}"
                 read_content_and_push_file(metadata_bucket_name, new_file_name, encoded_string)
                 flag_int = int(body_flag_file) + 1
-                if flag_int > 10:
+                if flag_int > 5:
                   flag_string = "0"
                 else:
                   flag_string = str(flag_int)

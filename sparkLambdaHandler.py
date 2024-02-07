@@ -28,9 +28,11 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         return content
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
+        sys.exit(0)
         #raise e
     except Exception as e :
         logger.error(f"Error: {e}")
+        sys.exit(0)
         #raise e
     else:
         logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
