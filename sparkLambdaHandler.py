@@ -189,7 +189,7 @@ def lambda_handler(event, context):
         unprocessed_files = get_unprocessed_files(unprocessed_file_bucket,unprocessed_file_key)
         
         #Append error content from error file if it exists
-        unprocessed_files = unprocessed_files.strip() + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
+        unprocessed_files = unprocessed_files + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
         unprocessed_files = unprocessed_files.strip()
         logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
         os.environ['INPUT_PATHS'] = unprocessed_files
