@@ -78,7 +78,7 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       PackageType: Image
-      FunctionName: !Sub '${LambdaFunctionPrefix}-${AWS::StackName}'
+      FunctionName: !Sub '${LambdaFunctionPrefix}-bb-market'
       ImageUri: !Ref ImageUri
       ImageConfig:
         Command: !Ref Command
