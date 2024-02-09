@@ -24,7 +24,7 @@ Parameters:
   LambdaFunctionPrefix:
     Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
     Type: String
-    Default: SparkJob
+    Default: Sparkjob
   LambdaTimeout:
     Description: 'Optional: Maximum Lambda invocation runtime in seconds. (min 1 - 900 max)'
     Default: 900
