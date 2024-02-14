@@ -18,6 +18,7 @@ Parameters:
     Default: Append
 
 Resources:
+  #Giving S3 source bucket permission to call Lambda function for FilesCollector
   FilesCollectorLambdaInvokePermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
@@ -27,6 +28,7 @@ Resources:
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !Sub 'arn:aws:s3:::${FilesCollectorSourceBucketName}'
 
+  #Creating role for the lambda function that creates S3 trigger
   FilesCollectorS3TriggerLambdaRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -57,9 +59,10 @@ Resources:
                   - 'logs:PutLogEvents'
                 Resource: 'arn:aws:logs:*:*:*'
   
+  #Creating lambda function that creates S3 trigger
   FilesCollectorS3TriggerLambda:
     Type: 'AWS::Lambda::Function'
-    DependsOn: FilesCollectorLambdaInvokeConfig
+    DependsOn: FilesCollectorS3TriggerLambdaRole
     Properties:
       FunctionName: !Sub 'FilesCollectorS3TriggerLambda-${AWS::StackName}'
       Handler: index.lambda_handler
@@ -119,12 +122,13 @@ Resources:
             cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")
       Runtime: python3.10
       Description: A function that collects all the file names from S3Trigger.
-      Role: !Ref FilesCollectorLambdaArn
+      Role: !GetAtt FilesCollectorS3TriggerLambdaRole.Arn
       Timeout: 50
 
+  #Calling function which creates S3 trigger
   FilesCollectorInvokeS3TriggerLambda:
     Type: 'Custom::InvokeFilesCollectorS3TriggerLambda'
-    DependsOn: FilesCollectorLambdaInvokePermission
+    DependsOn: FilesCollectorS3TriggerLambda
     Properties:
       ServiceToken: !GetAtt FilesCollectorS3TriggerLambda.Arn
       TargetLambdaArn: !Ref FilesCollectorLambdaArn
