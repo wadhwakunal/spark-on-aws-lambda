@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  FilesCollectorLambdaArn:
+    Type: String
+    Description: 'Mandatory: FilesCollector lambda arn which needs to get triggered on FilesCollector source bucket'
+  FilesCollectorSourceBucketName:
+    Type: String
+    Description: 'Mandatory: Source bucket where raw files will land e.g. bb-market-prod-kinesis-datastreams-dynamo'
+  FilesCollectorTriggerPrefixPattern:
+    Type: String
+    Description: 'Optional: Prefix pattern through which FilesCollector Lambda will get triggered'
+    Default: ''
+  FilesCollectorNotificationsSaveMode:
+    Type: String
+    Description: 'Optional: Notifications can be inserted or appended So only two values allowed: Insert/Append'
+    Default: Append
+
+Resources:
+  FilesCollectorLambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref FilesCollectorLambdaArn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${FilesCollectorSourceBucketName}'
+
+  FilesCollectorS3TriggerLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetBucketNotification'
+                  - 's3:PutBucketNotification'
+                Resource: !Sub 'arn:aws:s3:::${FilesCollectorSourceBucketName}'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+  
+  FilesCollectorS3TriggerLambda:
+    Type: 'AWS::Lambda::Function'
+    DependsOn: FilesCollectorLambdaInvokeConfig
+    Properties:
+      FunctionName: !Sub 'FilesCollectorS3TriggerLambda-${AWS::StackName}'
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+
+          import json
+          import logging
+          import boto3
+          import cfnresponse
+
+          # Set up logging
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+          def lambda_handler(event, context):
+            logger.info("Inside function to add S3 Trigger")
+            logger.info("Received event: " + json.dumps(event, indent=2))
+
+            source_bucket_name = event['ResourceProperties']["SourceBucketName"]
+            target_lambda_arn = event['ResourceProperties']['TargetLambdaArn']
+            notifications_save_mode = event['ResourceProperties']['NotificationsSaveMode']
+            trigger_prefix_pattern = event['ResourceProperties']['TriggerPrefixPattern']
+            
+            try:
+              lambda_configurations = []
+              if notifications_save_mode.lower() == "insert":
+                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
+              elif notifications_save_mode.lower() == "append":
+                s3_client = boto3.client('s3')
+                existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
+                for config in existing_configurations['LambdaFunctionConfigurations']:
+                  config_dict = {}
+                  config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
+                  config_dict['Events'] = config['Events']
+                  config_dict['Filter'] = config['Filter']
+                  lambda_configurations.append(config_dict)
+                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
+              else:
+                raise Exception("Notifications save mode is invalid. Permissible values: Append/Insert.")
+              logger.info(f"Printing S3 Trigger config: {lambda_configurations}")
+              s3 = boto3.resource('s3')  
+              bucket_notification = s3.BucketNotification(source_bucket_name)
+              response = bucket_notification.put(
+                NotificationConfiguration={
+                  'LambdaFunctionConfigurations': lambda_configurations
+              })
+              responseData={'source_bucket_name':source_bucket_name}
+              responseStatus = 'SUCCESS'
+              logger.info(f"S3 Trigger successfully added for {source_bucket_name}")
+            except Exception as e:
+              responseStatus = 'FAILED'
+              responseData = {'Failure': 'Something bad happened.'}
+              logger.info(f"S3 Trigger failed for {source_bucket_name}: {e}")
+              raise e
+            cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")
+      Runtime: python3.10
+      Description: A function that collects all the file names from S3Trigger.
+      Role: !Ref FilesCollectorLambdaArn
+      Timeout: 50
+
+  FilesCollectorInvokeS3TriggerLambda:
+    Type: 'Custom::InvokeFilesCollectorS3TriggerLambda'
+    DependsOn: FilesCollectorLambdaInvokePermission
+    Properties:
+      ServiceToken: !GetAtt FilesCollectorS3TriggerLambda.Arn
+      TargetLambdaArn: !Ref FilesCollectorLambdaArn
+      SourceBucketName: !Ref FilesCollectorSourceBucketName
+      TriggerPrefixPattern: !Ref FilesCollectorTriggerPrefixPattern
+      NotificationsSaveMode: !Ref FilesCollectorNotificationsSaveMode
