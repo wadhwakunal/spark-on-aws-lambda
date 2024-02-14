@@ -89,36 +89,53 @@ Resources:
             trigger_prefix_pattern = event['ResourceProperties']['TriggerPrefixPattern']
             
             try:
-              lambda_configurations = []
-              if notifications_save_mode.lower() == "insert":
-                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
-              elif notifications_save_mode.lower() == "append":
-                s3_client = boto3.client('s3')
+              s3_client = boto3.client('s3')
+              if event['RequestType'] == 'Delete':
+                lambda_configurations = []
                 existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
                 for config in existing_configurations['LambdaFunctionConfigurations']:
                   config_dict = {}
-                  config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
-                  config_dict['Events'] = config['Events']
-                  config_dict['Filter'] = config['Filter']
+                  if config['LambdaFunctionArn'] != target_lambda_arn
+                    config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
+                    config_dict['Events'] = config['Events']
+                    config_dict['Filter'] = config['Filter']
                   lambda_configurations.append(config_dict)
-                lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
-              else:
-                raise Exception("Notifications save mode is invalid. Permissible values: Append/Insert.")
-              logger.info(f"Printing S3 Trigger config: {lambda_configurations}")
-              s3 = boto3.resource('s3')  
-              bucket_notification = s3.BucketNotification(source_bucket_name)
-              response = bucket_notification.put(
-                NotificationConfiguration={
-                  'LambdaFunctionConfigurations': lambda_configurations
-              })
-              responseData={'source_bucket_name':source_bucket_name}
-              responseStatus = 'SUCCESS'
-              logger.info(f"S3 Trigger successfully added for {source_bucket_name}")
+                bucket_notification = s3.BucketNotification(source_bucket_name)
+                response = bucket_notification.put(
+                  NotificationConfiguration={
+                    'LambdaFunctionConfigurations': lambda_configurations
+                })
+                logger.info(f"S3 Trigger successfully deleted for {target_lambda_arn}")
+              elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+                lambda_configurations = []
+                if notifications_save_mode.lower() == "insert":
+                  lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
+                elif notifications_save_mode.lower() == "append":
+                  existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
+                  for config in existing_configurations['LambdaFunctionConfigurations']:
+                    config_dict = {}
+                    config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
+                    config_dict['Events'] = config['Events']
+                    config_dict['Filter'] = config['Filter']
+                    lambda_configurations.append(config_dict)
+                  lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
+                else:
+                  raise Exception("Notifications save mode is invalid. Permissible values: Append/Insert.")
+                logger.info(f"Printing S3 Trigger config: {lambda_configurations}")
+                s3 = boto3.resource('s3')  
+                bucket_notification = s3.BucketNotification(source_bucket_name)
+                response = bucket_notification.put(
+                  NotificationConfiguration={
+                    'LambdaFunctionConfigurations': lambda_configurations
+                })
+                responseData={'source_bucket_name':source_bucket_name}
+                responseStatus = 'SUCCESS'
+                logger.info(f"S3 Trigger successfully added for {source_bucket_name}")
             except Exception as e:
-              responseStatus = 'FAILED'
-              responseData = {'Failure': 'Something bad happened.'}
-              logger.info(f"S3 Trigger failed for {source_bucket_name}: {e}")
-              raise e
+                responseStatus = 'FAILED'
+                responseData = {'Failure': 'Something bad happened.'}
+                logger.info(f"S3 Trigger failed for {source_bucket_name}: {e}")
+                raise e
             cfnresponse.send(event, context, responseStatus, responseData, "CustomResourcePhysicalID")
       Runtime: python3.10
       Description: A function that collects all the file names from S3Trigger.
