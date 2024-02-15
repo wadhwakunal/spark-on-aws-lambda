@@ -91,21 +91,22 @@ Resources:
             try:
               s3_client = boto3.client('s3')
               if event['RequestType'] == 'Delete':
-                lambda_configurations = []
-                existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
-                for config in existing_configurations['LambdaFunctionConfigurations']:
-                  config_dict = {}
-                  if config['LambdaFunctionArn'] != target_lambda_arn
-                    config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
-                    config_dict['Events'] = config['Events']
-                    config_dict['Filter'] = config['Filter']
-                  lambda_configurations.append(config_dict)
-                bucket_notification = s3.BucketNotification(source_bucket_name)
-                response = bucket_notification.put(
-                  NotificationConfiguration={
-                    'LambdaFunctionConfigurations': lambda_configurations
-                })
-                logger.info(f"S3 Trigger successfully deleted for {target_lambda_arn}")
+                # lambda_configurations = []
+                # existing_configurations = s3_client.get_bucket_notification_configuration(Bucket=source_bucket_name)
+                # for config in existing_configurations['LambdaFunctionConfigurations']:
+                #   config_dict = {}
+                #   if config['LambdaFunctionArn'] != target_lambda_arn
+                #     config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
+                #     config_dict['Events'] = config['Events']
+                #     config_dict['Filter'] = config['Filter']
+                #   lambda_configurations.append(config_dict)
+                # bucket_notification = s3.BucketNotification(source_bucket_name)
+                # response = bucket_notification.put(
+                #   NotificationConfiguration={
+                #     'LambdaFunctionConfigurations': lambda_configurations
+                # })
+                # logger.info(f"S3 Trigger successfully deleted for {target_lambda_arn}")
+                logger.info("Hello World!")
               elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
                 lambda_configurations = []
                 if notifications_save_mode.lower() == "insert":
