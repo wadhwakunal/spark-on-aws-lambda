@@ -101,6 +101,8 @@ Resources:
                     config_dict['Events'] = config['Events']
                     config_dict['Filter'] = config['Filter']
                   lambda_configurations.append(config_dict)
+                if not lambda_configurations:
+                  lambda_configurations.append({'LambdaFunctionArn': '', 'Events': [], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': ''}]}}})
                 bucket_notification = s3.BucketNotification(source_bucket_name)
                 response = bucket_notification.put(
                   NotificationConfiguration={
