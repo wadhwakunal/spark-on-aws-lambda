@@ -89,6 +89,7 @@ Resources:
             trigger_prefix_pattern = event['ResourceProperties']['TriggerPrefixPattern']
             
             try:
+              s3 = boto3.resource('s3')
               s3_client = boto3.client('s3')
               if event['RequestType'] == 'Delete':
                 lambda_configurations = []
@@ -106,7 +107,6 @@ Resources:
                     'LambdaFunctionConfigurations': lambda_configurations
                 })
                 logger.info(f"S3 Trigger successfully deleted for {target_lambda_arn}")
-                logger.info("Hello World!")
                 responseData={'source_bucket_name':source_bucket_name}
                 responseStatus = 'SUCCESS'
               elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
@@ -124,8 +124,7 @@ Resources:
                   lambda_configurations.append({'LambdaFunctionArn': target_lambda_arn, 'Events': ['s3:ObjectCreated:*'], 'Filter': {'Key': {'FilterRules': [{'Name': 'Prefix', 'Value': f'{trigger_prefix_pattern}'}]}}})
                 else:
                   raise Exception("Notifications save mode is invalid. Permissible values: Append/Insert.")
-                logger.info(f"Printing S3 Trigger config: {lambda_configurations}")
-                s3 = boto3.resource('s3')  
+                logger.info(f"Printing S3 Trigger config: {lambda_configurations}")  
                 bucket_notification = s3.BucketNotification(source_bucket_name)
                 response = bucket_notification.put(
                   NotificationConfiguration={
