@@ -100,7 +100,7 @@ Resources:
                     config_dict['LambdaFunctionArn'] = config['LambdaFunctionArn']
                     config_dict['Events'] = config['Events']
                     config_dict['Filter'] = config['Filter']
-                  lambda_configurations.append(config_dict)
+                    lambda_configurations.append(config_dict)
                 bucket_notification = s3.BucketNotification(source_bucket_name)
                 if not lambda_configurations:
                   response = bucket_notification.put(
