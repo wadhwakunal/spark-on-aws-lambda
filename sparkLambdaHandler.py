@@ -143,8 +143,8 @@ def raise_alert(job_name,error):
             Destination={
                 "ToAddresses": [
                     "kunal.wadhwa@sportsbaazi.com",
-                    "gautam.dey@sportsbaazi.com",
-                    "siddharth.tripathi@sportsbaazi.com"
+                    #"gautam.dey@sportsbaazi.com",
+                    #"siddharth.tripathi@sportsbaazi.com"
                 ],
             },
             Message={
