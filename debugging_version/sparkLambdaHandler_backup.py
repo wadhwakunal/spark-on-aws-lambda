@@ -34,28 +34,6 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         raise e
     else:
         logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
-
-def get_unprocessed_files_size(unprocessed_files: str) -> str:
-    try:
-        logger.info('Inside function get_unprocessed_files_size')
-        unprocessed_files_list = unprocessed_files.splitlines()
-        s3 = boto3.resource("s3")
-        files_size = 0
-        for unprocessed_file in unprocessed_files_list:
-            bucket_name = unprocessed_file.split('/')[2]
-            key_name = '/'.join(unprocessed_file.split('/')[3:])
-            size = s3.Object(bucket_name, key_name).size
-            logger.info(f'Unprocessed file bucket: {bucket_name}, Unprocessed file key: {key_name}, Unprocessed file size: {size}')
-            files_size += size
-        #logger.info(f'Now deleting file {unprocessed_file_key}')
-        #s3.Object(s3_bucket_script, unprocessed_file_key).delete()
-        return files_size
-    except botocore.exceptions.ClientError as e:
-        logger.error(f"Boto Error: {e.response['Error']['Code']}")
-        raise e
-    except Exception as e :
-        logger.error(f"Error: {e}")
-        raise e
     
 def s3_script_download(s3_bucket_script: str,input_script: str)-> None:
     """
@@ -212,7 +190,6 @@ def lambda_handler(event, context):
         unprocessed_files = unprocessed_files.strip() + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
         unprocessed_files = unprocessed_files.strip()
         logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
-        logger.info(f"Size of unprocessed_files: {get_unprocessed_files_size(unprocessed_files)}")
         os.environ['INPUT_PATHS'] = unprocessed_files
     
         #Download Spark script from S3 to local
