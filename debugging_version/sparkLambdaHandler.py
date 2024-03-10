@@ -35,7 +35,7 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
     else:
         logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
 
-def get_unprocessed_files_size(unprocessed_files: str) -> str:
+def get_unprocessed_files_size(unprocessed_files: str):
     try:
         logger.info('Inside function get_unprocessed_files_size')
         unprocessed_files_list = unprocessed_files.splitlines()
@@ -44,7 +44,7 @@ def get_unprocessed_files_size(unprocessed_files: str) -> str:
         for unprocessed_file in unprocessed_files_list:
             bucket_name = unprocessed_file.split('/')[2]
             key_name = '/'.join(unprocessed_file.split('/')[3:])
-            size = s3.Object(bucket_name, key_name).size
+            size = s3.Object(bucket_name, key_name).content_length
             logger.info(f'Unprocessed file bucket: {bucket_name}, Unprocessed file key: {key_name}, Unprocessed file size: {size}')
             files_size += size
         #logger.info(f'Now deleting file {unprocessed_file_key}')
