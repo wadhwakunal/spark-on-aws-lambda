@@ -5,7 +5,7 @@ Parameters:
   JobName:
     Description: 'Mandatory: Name to be assigned to the Glue Job'
     Type: String
-  JobRoleArn:
+  JobRole:
     Description: 'Mandatory: IAM role to be assigned to the Glue Job'
     Type: String
   ScriptBucket:
@@ -19,12 +19,12 @@ Resources:
   PySparkGlueJob:
     Type: "AWS::Glue::Job"
     Properties:
-      Role: !Ref JobRoleArn
+      Role: !Sub arn:aws:iam::647554026283:role/${JobRole}
       Name: !Ref JobName
       Command: {
         "Name" : "glueetl",
         "ScriptLocation": !Sub "s3://${ScriptBucket}/${ScriptKey}",
-	      "PythonVersion": "3.10"
+        "PythonVersion": "3.10"
       }
       DefaultArguments: {
           "--TempDir": !Sub "s3://${ScriptBucket}/tmp",
