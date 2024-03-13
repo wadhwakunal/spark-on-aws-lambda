@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  JobName:
+    Description: 'Mandatory: Name to be assigned to the Glue Job'
+    Type: String
+  JobRoleArn:
+    Description: 'Mandatory: IAM role to be assigned to the Glue Job'
+    Type: String
+  ScriptBucket:
+    Description: 'Mandatory: S3 bucket where PySpark script is placed'
+    Type: String
+  ScriptKey:
+    Description: 'Mandatory: S3 key where PySpark script is placed'
+    Type: String  
+
+Resources:
+  PySparkGlueJob:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Role: !Ref JobRoleArn
+      Name: !Ref JobName
+      Command: {
+        "Name" : "glueetl",
+        "ScriptLocation": !Sub "s3://${ScriptBucket}/${ScriptKey}",
+	      "PythonVersion": "3.10"
+      }
+      DefaultArguments: {
+          "--TempDir": !Sub "s3://${ScriptBucket}/tmp",
+          "--enable-continuous-cloudwatch-log": "true",
+          "--enable-continuous-log-filter": "false",
+          "--enable-glue-datacatalog": "true",
+          "--job-bookmark-option": "job-bookmark-disable",
+          "--batch_date": "unprocessed_files"
+      }
+      MaxRetries: 0
+      Description: "Glue job to process data in case Spark Lambda is not able to handle the data volume"
+      MaxCapacity: 2
