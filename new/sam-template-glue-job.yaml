@@ -24,7 +24,7 @@ Resources:
       Command: {
         "Name" : "glueetl",
         "ScriptLocation": !Sub "s3://${ScriptBucket}/${ScriptKey}",
-        "PythonVersion": "3.10"
+        #"PythonVersion": "3.10"
       }
       DefaultArguments: {
           "--TempDir": !Sub "s3://${ScriptBucket}/tmp",
