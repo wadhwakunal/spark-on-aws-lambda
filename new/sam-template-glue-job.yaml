@@ -23,8 +23,7 @@ Resources:
       Name: !Ref JobName
       Command: {
         "Name" : "glueetl",
-        "ScriptLocation": !Sub "s3://${ScriptBucket}/${ScriptKey}",
-        #"PythonVersion": "3.10"
+        "ScriptLocation": !Sub "s3://${ScriptBucket}/${ScriptKey}"
       }
       DefaultArguments: {
           "--TempDir": !Sub "s3://${ScriptBucket}/tmp",
@@ -32,8 +31,10 @@ Resources:
           "--enable-continuous-log-filter": "false",
           "--enable-glue-datacatalog": "true",
           "--job-bookmark-option": "job-bookmark-disable",
-          "--batch_date": "unprocessed_files"
+          "--datalake-formats": "delta",
+          "--INPUT_PATHS": "unprocessed_files"
       }
+      GlueVersion: "3.0"
       MaxRetries: 0
       Description: "Glue job to process data in case Spark Lambda is not able to handle the data volume"
       MaxCapacity: 2
