@@ -21,6 +21,10 @@ Parameters:
   AthenaWorkgroup:
     Type: String
     Description: 'Mandatory: Athena Workgroup e.g. bb-datalake'
+  DataThreshold:
+    Type: Number
+    Description: 'Optional: Number of bytes above which Glue job will get triggered'
+    Default: 100000000
   LambdaFunctionPrefix:
     Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
     Type: String
@@ -149,6 +153,8 @@ Resources:
           DATABASE_NAME: !Ref DatabaseName
           TABLE_NAME: !Ref TableName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroup
+          GLUE_JOB: !Ref GlueJobName
+          DATA_THRESHOLD: !Ref DataThreshold
   
   SparkLambdaInvokeConfig:
     Type: 'AWS::Lambda::EventInvokeConfig'
