@@ -23,15 +23,17 @@ def get_unprocessed_files(s3_bucket_script: str,unprocessed_file_key: str) -> st
         s3 = boto3.resource("s3")
         content = s3.Object(s3_bucket_script, unprocessed_file_key).get()['Body'].read().decode('utf-8')
         logger.info(f'Unprocessed files: {content}')
-        #logger.info(f'Now deleting file {unprocessed_file_key}')
-        #s3.Object(s3_bucket_script, unprocessed_file_key).delete()
+        logger.info(f'Now deleting file {unprocessed_file_key}')
+        s3.Object(s3_bucket_script, unprocessed_file_key).delete()
         return content
     except botocore.exceptions.ClientError as e:
         logger.error(f"Boto Error: {e.response['Error']['Code']}")
-        raise e
+        sys.exit(0)
+        #raise e
     except Exception as e :
         logger.error(f"Error: {e}")
-        raise e
+        sys.exit(0)
+        #raise e
     else:
         logger.info(f'Successfully extracted file names from {unprocessed_file_key}')
 
@@ -143,8 +145,8 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         load_partitions(event['database_name'],event['table_name'],event['athena_workgroup'])
     except Exception as e :
         logger.error(f'Error Spark-Submit with exception: {e}')
-        #logger.info(f'Writing unprocessed_file content to the error file: {event["error_file_key"]}')
-        #write_content_to_s3_file(event["error_file_bucket"],event["error_file_key"],os.environ['INPUT_PATHS'])
+        logger.info(f'Writing unprocessed_file content to the error file: {event["error_file_key"]}')
+        write_content_to_s3_file(event["error_file_bucket"],event["error_file_key"],os.environ['INPUT_PATHS'])
         raise e
     else:
         logger.info(f'Script {input_script} successfully submitted')
@@ -161,7 +163,7 @@ def glue_submit(job_name: str, arguments: dict) -> None:
         raise Exception( "boto3 client error in run_glue_job: " + e.__str__())
     except Exception as e:
       raise Exception( "Unexpected error in run_glue_job: " + e.__str__())
-
+    
 def raise_alert(job_name,error):
     try:
         logger.info("Inside function raise_alert")
@@ -174,8 +176,8 @@ def raise_alert(job_name,error):
             Destination={
                 "ToAddresses": [
                     "kunal.wadhwa@sportsbaazi.com",
-                    "gautam.dey@sportsbaazi.com",
-                    "siddharth.tripathi@sportsbaazi.com"
+                    #"gautam.dey@sportsbaazi.com",
+                    #"siddharth.tripathi@sportsbaazi.com"
                 ],
             },
             Message={
@@ -222,7 +224,7 @@ def lambda_handler(event, context):
         unprocessed_files = get_unprocessed_files(unprocessed_file_bucket,unprocessed_file_key)
         
         #Append error content from error file if it exists
-        unprocessed_files = unprocessed_files.strip() + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
+        unprocessed_files = unprocessed_files + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
         unprocessed_files = unprocessed_files.strip()
         logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
 
@@ -233,7 +235,9 @@ def lambda_handler(event, context):
         #Check if total size of uprocessed files is greater than the threshold
         if total_size_unprocessed_file > int(threshold):
             #Set arguments for glue job
-            arguments = {'--INPUT_PATHS': unprocessed_files}
+            arguments = {'--INPUT_PATHS': unprocessed_files, 
+                         '--ERROR_FILE_BUCKET': event["error_file_bucket"],
+                         '--ERROR_FILE_KEY': event["error_file_key"]}
             #Run Glue job
             glue_job_id = glue_submit(glue_job,arguments)
             logger.info(f"Glue job submitted with id: {glue_job_id}")
@@ -252,5 +256,5 @@ def lambda_handler(event, context):
             event['athena_workgroup'] = athena_workgroup
             spark_submit(s3_bucket_script,input_script, event)
     except Exception as e :
-        #raise_alert(table_name,e)
+        raise_alert(table_name,e)
         raise e
