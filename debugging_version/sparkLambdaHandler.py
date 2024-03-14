@@ -151,6 +151,16 @@ def spark_submit(s3_bucket_script: str,input_script: str, event: dict)-> None:
         logger.info(f'Deleting error file {event["error_file_key"]}')
         delete_file_from_s3(event["error_file_bucket"],event["error_file_key"])
 
+def glue_submit(job_name: str, arguments: dict) -> None:
+    glue_client = boto3.client("glue")
+    try:
+        job_run_id = glue_client.start_job_run(JobName=job_name, Arguments=arguments)
+        return job_run_id
+    except botocore.exceptions.ClientError as e:
+        raise Exception( "boto3 client error in run_glue_job: " + e.__str__())
+    except Exception as e:
+      raise Exception( "Unexpected error in run_glue_job: " + e.__str__())
+
 def raise_alert(job_name,error):
     try:
         logger.info("Inside function raise_alert")
@@ -200,6 +210,8 @@ def lambda_handler(event, context):
         database_name = os.environ['DATABASE_NAME']
         table_name = os.environ['TABLE_NAME']
         athena_workgroup = os.environ['ATHENA_WORKGROUP']
+        glue_job = os.environ['GLUE_JOB']
+        threshold = os.environ['THRESHOLD']
         
         #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
         unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
@@ -212,19 +224,31 @@ def lambda_handler(event, context):
         unprocessed_files = unprocessed_files.strip() + "\n" + read_content_from_s3_file(unprocessed_file_bucket, unprocessed_file_key.replace("unprocessed_file","error_file"))
         unprocessed_files = unprocessed_files.strip()
         logger.info(f"Final list of unprocessed_files: {unprocessed_files}")
-        logger.info(f"Size of unprocessed_files: {get_unprocessed_files_size(unprocessed_files)}")
-        os.environ['INPUT_PATHS'] = unprocessed_files
+
+        #Calculate total size of unprocessed files
+        total_size_unprocessed_file = get_unprocessed_files_size(unprocessed_files)
+        logger.info(f"Size of unprocessed_files: {total_size_unprocessed_file}")
+
+        #Check if total size of uprocessed files is greater than the threshold
+        if total_size_unprocessed_file > threshold:
+            #Set arguments for glue job
+            arguments = {'--INPUT_PATHS': unprocessed_files}
+            #Run Glue job
+            glue_submit(glue_job,arguments)
+        else:
+            #Run Spark lambda job
+            os.environ['INPUT_PATHS'] = unprocessed_files
     
-        #Download Spark script from S3 to local
-        s3_script_download(s3_bucket_script,input_script)
+            #Download Spark script from S3 to local
+            s3_script_download(s3_bucket_script,input_script)
         
-        # Set the environment variables for the Spark application
-        event['error_file_bucket'] = unprocessed_file_bucket
-        event['error_file_key'] = unprocessed_file_key.replace("unprocessed_file","error_file")
-        event['database_name'] = database_name
-        event['table_name'] = table_name
-        event['athena_workgroup'] = athena_workgroup
-        spark_submit(s3_bucket_script,input_script, event)
+            # Set the environment variables for the Spark application
+            event['error_file_bucket'] = unprocessed_file_bucket
+            event['error_file_key'] = unprocessed_file_key.replace("unprocessed_file","error_file")
+            event['database_name'] = database_name
+            event['table_name'] = table_name
+            event['athena_workgroup'] = athena_workgroup
+            spark_submit(s3_bucket_script,input_script, event)
     except Exception as e :
         #raise_alert(table_name,e)
         raise e
