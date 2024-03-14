@@ -230,7 +230,7 @@ def lambda_handler(event, context):
         logger.info(f"Size of unprocessed_files: {total_size_unprocessed_file}")
 
         #Check if total size of uprocessed files is greater than the threshold
-        if total_size_unprocessed_file > threshold:
+        if int(total_size_unprocessed_file) > threshold:
             #Set arguments for glue job
             arguments = {'--INPUT_PATHS': unprocessed_files}
             #Run Glue job
