@@ -24,7 +24,7 @@ Parameters:
   GlueJob:
     Type: String
     Description: 'Mandatory: Glue job name e.g. BBPendingBidsJob'
-  Threshold:
+  DataThreshold:
     Type: Number
     Description: 'Optional: Number of bytes above which Glue job will get triggered'
     Default: 100000000
@@ -119,7 +119,7 @@ Resources:
           TABLE_NAME: !Ref TableName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroup
           GLUE_JOB: !Ref GlueJob
-          THRESHOLD: !Threshold
+          DATA_THRESHOLD: !DataThreshold
   
   SparkLambdaInvokeConfig:
     Type: 'AWS::Lambda::EventInvokeConfig'

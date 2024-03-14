@@ -211,7 +211,7 @@ def lambda_handler(event, context):
         table_name = os.environ['TABLE_NAME']
         athena_workgroup = os.environ['ATHENA_WORKGROUP']
         glue_job = os.environ['GLUE_JOB']
-        threshold = os.environ['THRESHOLD']
+        threshold = os.environ['DATA_THRESHOLD']
         
         #Get the S3 key of file consisting names of unprocessed files from the triggering lambda
         unprocessed_file_bucket = event["Records"][0]["s3"]["bucket"]["name"]
