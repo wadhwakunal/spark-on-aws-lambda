@@ -90,7 +90,6 @@ Conditions:
   HasWorkingDirectory: !Not  [ !Equals [ '', !Ref WorkingDirectory ] ]
 
 Resources:
-  Resources:
   PySparkGlueJob:
     Type: "AWS::Glue::Job"
     Properties:
