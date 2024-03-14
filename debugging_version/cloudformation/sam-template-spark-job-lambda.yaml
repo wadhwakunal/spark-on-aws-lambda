@@ -119,7 +119,7 @@ Resources:
           TABLE_NAME: !Ref TableName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroup
           GLUE_JOB: !Ref GlueJob
-          DATA_THRESHOLD: !DataThreshold
+          DATA_THRESHOLD: !Ref DataThreshold
   
   SparkLambdaInvokeConfig:
     Type: 'AWS::Lambda::EventInvokeConfig'
