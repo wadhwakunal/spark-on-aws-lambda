@@ -236,8 +236,8 @@ def lambda_handler(event, context):
         if total_size_unprocessed_file > int(threshold):
             #Set arguments for glue job
             arguments = {'--INPUT_PATHS': unprocessed_files, 
-                         '--ERROR_FILE_BUCKET': event["error_file_bucket"],
-                         '--ERROR_FILE_KEY': event["error_file_key"]}
+                         '--ERROR_FILE_BUCKET': unprocessed_file_bucket,
+                         '--ERROR_FILE_KEY': unprocessed_file_key.replace("unprocessed_file","error_file")}
             #Run Glue job
             glue_job_id = glue_submit(glue_job,arguments)
             logger.info(f"Glue job submitted with id: {glue_job_id}")
