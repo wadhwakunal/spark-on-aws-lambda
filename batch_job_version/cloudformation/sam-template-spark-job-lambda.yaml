@@ -12,22 +12,6 @@ Parameters:
   SparkScript:
     Type: String
     Description: 'Mandatory: Amazon S3 key where the spark script resides. Start without the /.eg: script/location/name.py'
-  DatabaseName:
-    Type: String
-    Description: 'Mandatory: Glue Catalog Database where the table resides e.g. bb_datalake_validated'
-  TableName:
-    Type: String
-    Description: 'Mandatory: Glue Catalog output table e.g. bb_markets'
-  AthenaWorkgroup:
-    Type: String
-    Description: 'Mandatory: Athena Workgroup e.g. bb-datalake'
-  GlueJob:
-    Type: String
-    Description: 'Mandatory: Glue job name e.g. BBPendingBidsJob'
-  DataThreshold:
-    Type: Number
-    Description: 'Optional: Number of bytes above which Glue job will get triggered'
-    Default: 100000000
   LambdaFunctionPrefix:
     Description: 'Optional: This is the prefix for the name of the lambda function that will be created. This name must satisfy the pattern ^[a-z0-9-_]{1,64}$'
     Type: String
@@ -115,11 +99,6 @@ Resources:
         Variables:
           SCRIPT_BUCKET: !Ref ScriptBucket
           SPARK_SCRIPT: !Ref SparkScript
-          DATABASE_NAME: !Ref DatabaseName
-          TABLE_NAME: !Ref TableName
-          ATHENA_WORKGROUP: !Ref AthenaWorkgroup
-          GLUE_JOB: !Ref GlueJob
-          DATA_THRESHOLD: !Ref DataThreshold
   
   SparkLambdaInvokeConfig:
     Type: 'AWS::Lambda::EventInvokeConfig'
