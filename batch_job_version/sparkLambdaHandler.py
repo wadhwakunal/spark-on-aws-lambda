@@ -107,6 +107,10 @@ def lambda_handler(event, context):
         
         #Trigger Spark Job
         spark_submit(s3_bucket_script,input_script, event)
+
+        return True
     except Exception as e :
         #raise_alert(table_name,e)
         raise e
+
+        return False
