@@ -111,5 +111,4 @@ def lambda_handler(event, context):
         return { "job_status": "Passed" }
     except Exception as e :
         #raise_alert(table_name,e)
-        return { "job_status": "Failed" }
-        raise e
+        return { "job_status": "Failed", "job_error": e }
