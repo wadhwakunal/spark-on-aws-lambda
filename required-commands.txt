@@ -95,6 +95,8 @@
 
 	sam deploy --template-file sam-template-spark-job-lambda.yaml --stack-name bb-users-spark-lambda --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake ParameterKey=SparkScript,ParameterValue=pyspark_scripts/bb_users.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest'
 
+	sam deploy --template-file sam-template-spark-job-lambda.yaml --stack-name bb-leagues-spark-lambda --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake ParameterKey=SparkScript,ParameterValue=pyspark_scripts/bb_leagues.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest'
+
 4. Clean up
 	sam delete --stack-name spark-on-lambda-stack
 	sam delete --stack-name spark-on-lambda-image-builder
