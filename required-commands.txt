@@ -99,7 +99,7 @@
 
 	sam deploy --template-file sam-template-spark-job-lambda.yaml --stack-name bb-matches-spark-lambda --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake ParameterKey=SparkScript,ParameterValue=pyspark_scripts/bb_matches.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest'
 
-	sam deploy --template-file sam-template-spark-job-lambda.yaml --stack-name bb-matches-spark-lambda --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake ParameterKey=SparkScript,ParameterValue=pyspark_scripts/bb_market.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest'
+	sam deploy --template-file sam-template-spark-job-lambda.yaml --stack-name bb-market-spark-lambda --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --image-repository 647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest --parameter-overrides 'ParameterKey=ScriptBucket,ParameterValue=bb-datalake ParameterKey=SparkScript,ParameterValue=pyspark_scripts/bb_market.py ParameterKey=ImageUri,ParameterValue=647554026283.dkr.ecr.ap-south-1.amazonaws.com/sparkonlambda-spark-lambda-batch-image-builder:latest'
 
 4. Clean up
 	sam delete --stack-name spark-on-lambda-stack
